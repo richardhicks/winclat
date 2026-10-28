@@ -1,8 +1,7 @@
 # WinCLAT
 
 [![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/WinCLAT?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/WinCLAT)
-[![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/WinCLAT?label=Downloads)](https://www.powershellgallery.com/packages/WinCLAT)
-[![License](https://img.shields.io/github/license/richardhicks/winclat?label=License)](https://github.com/richardhicks/winclat/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/richardhicks/winclat/blob/main/LICENSE)
 
 PowerShell module for managing and reporting on Windows CLAT (WinCLAT) on Windows 11 clients, locally or remotely across many computers.
 
