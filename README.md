@@ -1,9 +1,14 @@
 # WinCLAT
 
 [![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/WinCLAT?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/WinCLAT)
-[![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/richardhicks/winclat/blob/main/LICENSE)
+[![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/WinCLAT?label=Downloads)](https://www.powershellgallery.com/packages/WinCLAT)
+[![License](https://img.shields.io/github/license/richardhicks/winclat?label=License)](https://github.com/richardhicks/winclat/blob/main/LICENSE)
 
 PowerShell module for managing and reporting on Windows CLAT (WinCLAT) on Windows 11 clients, locally or remotely across many computers.
+
+## What's New in 1.0.1
+
+- **DHCP option 108 trigger source** - `Get-WinClatInstance` now reports a `TriggerSource` of `DHCP Option 108` for an instance that Windows enabled after honoring DHCPv4 option 108 on an IPv6-mostly network. Version 1.0 reported it as `Unknown (2)`.
 
 ## What's New in 1.0
 
@@ -74,7 +79,7 @@ Every function accepts the following parameters for running against remote compu
 
 ### Get-WinClatConfiguration
 
-Return the global WinCLAT configuration (`Permit`, `Pref64FromDns`, `Pref64FromRA`, and `AutoEnable`) from the active or persistent store. The output includes the settings that Group Policy controls and the OS build, which helps track which computers have received the feature.
+Return the global WinCLAT configuration (`Permit`, `Pref64FromDns`, `Pref64FromRA`, and `AutoEnable`) from the active or persistent store. The output includes the settings that policy controls and the OS build, which helps track which computers have received the feature. Policy settings are detected from the registry, so values written by Group Policy and values written to the same registry key by another tool, such as an Intune Remediation, are both reported.
 
 #### Parameters
 
@@ -99,7 +104,7 @@ Get-ADComputer -Filter * -SearchBase 'OU=Windows Clients,DC=corp,DC=example,DC=n
 
 ### Get-WinClatInstance
 
-Return the WinCLAT state of each up network adapter with IPv6 enabled, including whether it is translating, the NAT64 prefix and its remaining lifetime, the CLAT addresses, and whether the instance was enabled automatically or manually (`Mode` and `TriggerSource`, read from the `Microsoft-Windows-IPxlatCfg/Operational` event log).
+Return the WinCLAT state of each up network adapter with IPv6 enabled, including whether it is translating, the NAT64 prefix and its remaining lifetime, the CLAT addresses, and whether the instance was enabled automatically or manually (`Mode` and `TriggerSource`, read from the `Microsoft-Windows-IPxlatCfg/Operational` event log). `TriggerSource` is `Pref64 RA` (the network advertises the PREF64 option), `DHCP Option 108` (the computer gave up its DHCPv4 lease on an IPv6-mostly network), `No IPv4` (the interface has no IPv4 connectivity), or `Manual`.
 
 > **Note:** Requires elevated (administrator) privileges on the target computer.
 
@@ -169,6 +174,8 @@ Change the global WinCLAT configuration. Only the settings supplied are changed.
 > **Note:** Requires elevated (administrator) privileges on the target computer.
 
 > **Note:** `Permit` is disabled by default in Windows, so CLAT does not activate on Wi-Fi or Ethernet until it is enabled. Disabling `Permit` or `AutoEnable` stops CLAT on every interface where it was automatically enabled. An instance enabled manually with `Set-WinClatInstance` keeps running.
+
+> **Note:** On an IPv6-mostly network (DHCPv4 option 108), a computer with `Permit` disabled takes a DHCPv4 lease. Enabling `Permit` does not release that lease, and neither does a DHCP renew. CLAT starts after the network adapter is restarted.
 
 #### Parameters
 

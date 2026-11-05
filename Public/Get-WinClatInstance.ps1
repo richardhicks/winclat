@@ -12,7 +12,7 @@ Function Get-WinClatInstance {
 
         Every computer produces at least one object. Computers that cannot be reached return Status Unreachable, computers without the WinCLAT feature return FeatureNotAvailable (NotSupported on Windows Server, which Microsoft does not deliver WinCLAT to), and sessions without elevation return ElevationRequired. WinCLAT is generally available on Windows 11 version 25H2 build 26200.9550 and later. A computer with no up adapter with IPv6 enabled matching InterfaceAlias returns one Success object with no interface data and an explanatory Message, without an error.
 
-        TriggerSource shows how an enabled instance was started, read from event 1106 in the Microsoft-Windows-IPxlatCfg/Operational log on the target: Pref64 RA, No IPv4, Manual, or Unknown (<code>) for a code not yet documented. It is empty when the instance is disabled or the event is not found, for example after the log was cleared. Mode is Manual when TriggerSource is Manual and Automatic for any other TriggerSource. Windows keeps a manually enabled instance running after AutoEnable is enabled again, so Mode can be Manual while AutoEnable is enabled. When TriggerSource is empty, Mode is Automatic when the active AutoEnable setting is enabled and Manual when it is disabled. RemotePrefixRemainingLifetimeRaw holds the netsh text only when the lifetime could not be converted to a TimeSpan, and is empty otherwise, so every object has the same columns for Export-Csv. It is left out of the list shown for a single result; use Format-List -Property * to see it. CollectedAtUtc records when netsh ran on the target, in UTC.
+        TriggerSource shows how an enabled instance was started, read from event 1106 in the Microsoft-Windows-IPxlatCfg/Operational log on the target: Pref64 RA, DHCP Option 108, No IPv4, Manual, or Unknown (<code>) for a code not yet documented. It is empty when the instance is disabled or the event is not found, for example after the log was cleared. Mode is Manual when TriggerSource is Manual and Automatic for any other TriggerSource. Windows keeps a manually enabled instance running after AutoEnable is enabled again, so Mode can be Manual while AutoEnable is enabled. When TriggerSource is empty, Mode is Automatic when the active AutoEnable setting is enabled and Manual when it is disabled. RemotePrefixRemainingLifetimeRaw holds the netsh text only when the lifetime could not be converted to a TimeSpan, and is empty otherwise, so every object has the same columns for Export-Csv. It is left out of the list shown for a single result; use Format-List -Property * to see it. CollectedAtUtc records when netsh ran on the target, in UTC.
 
         The CLAT IPv6 address is regenerated each time the instance is re-created. Do not treat it as a stable identifier.
 
@@ -62,9 +62,9 @@ Function Get-WinClatInstance {
         https://learn.microsoft.com/windows-server/administration/windows-commands/netsh
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.0.1
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 4, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com

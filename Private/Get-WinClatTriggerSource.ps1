@@ -10,7 +10,7 @@ Function Get-WinClatTriggerSource {
 
         The newest 1106 or 1107 event for each interface decides. When it is 1106, the interface's TriggerSource is returned; when it is 1107, the interface is left out. The numeric code is read from the event data, not the message text, so the result does not depend on the display language.
 
-        Returns a hashtable keyed by the interface LUID as a decimal string, the same form as [string](Get-NetAdapter).NetLuid, with values 'Pref64 RA' (1), 'No IPv4' (3), 'Manual' (5), or 'Unknown (<code>)' for codes not yet observed. The hashtable is empty when the log has no matching events or cannot be read; the reason is written to the verbose stream.
+        Returns a hashtable keyed by the interface LUID as a decimal string, the same form as [string](Get-NetAdapter).NetLuid, with values 'Pref64 RA' (1), 'DHCP Option 108' (2), 'No IPv4' (3), 'Manual' (5), or 'Unknown (<code>)' for codes not yet observed. The hashtable is empty when the log has no matching events or cannot be read; the reason is written to the verbose stream.
 
         This function must also be available in the remote session. See DESIGN.md, section 4.3.
 
@@ -32,9 +32,9 @@ Function Get-WinClatTriggerSource {
         https://learn.microsoft.com/powershell/module/microsoft.powershell.diagnostics/get-winevent
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.0.1
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 4, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
@@ -52,7 +52,7 @@ Function Get-WinClatTriggerSource {
 
     )
 
-    $Labels = @{ 1 = 'Pref64 RA'; 3 = 'No IPv4'; 5 = 'Manual' }
+    $Labels = @{ 1 = 'Pref64 RA'; 2 = 'DHCP Option 108'; 3 = 'No IPv4'; 5 = 'Manual' }
     $Result = @{}
 
     $Query = @{

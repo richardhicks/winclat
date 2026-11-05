@@ -4,7 +4,7 @@
     RootModule           = 'WinCLAT.psm1'
 
     # Version number of this module
-    ModuleVersion        = '1.0.0'
+    ModuleVersion        = '1.0.1'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -65,6 +65,10 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+1.0.1 (November 4, 2026)
+
+- Get-WinClatInstance: TriggerSource now reports DHCP Option 108 (event 1106 trigger source code 2) for an instance that Windows enabled after honoring DHCPv4 option 108 on an IPv6-mostly network. It was previously reported as Unknown (2). Mode for these instances is Automatic, as before.
+
 1.0.0 (October 28, 2026)
 
 Initial release.
