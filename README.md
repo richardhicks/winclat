@@ -1,23 +1,28 @@
 # WinCLAT
 
 [![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/WinCLAT?label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/WinCLAT)
+[![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/WinCLAT?label=Downloads)](https://www.powershellgallery.com/packages/WinCLAT)
 [![License](https://img.shields.io/github/license/richardhicks/winclat?label=License)](https://github.com/richardhicks/winclat/blob/main/LICENSE)
 
 PowerShell module for managing and reporting on Windows CLAT (WinCLAT) on Windows 11 clients, locally or remotely across many computers.
 
-## What's New in 1.0.1
-
-- **DHCP option 108 trigger source** - `Get-WinClatInstance` now reports a `TriggerSource` of `DHCP Option 108` for an instance that Windows enabled after honoring DHCPv4 option 108 on an IPv6-mostly network. Version 1.0 reported it as `Unknown (2)`.
-
-## What's New in 1.0
-
-Version 1.0 is the initial release. Highlights include:
+## Features
 
 - **Fleet-wide reporting** - Every function runs locally or against many computers in parallel over WinRM, accepts computer names from a text file or `Get-ADComputer`, and returns one row for every computer, including computers that are offline, do not have the feature, or are not elevated. Unreachable computers are detected in about two seconds instead of waiting for a WinRM timeout.
-- **Health checks with remediation** - `Test-WinClat` checks the global configuration and every IPv6-enabled interface, explains each warning and failure, and optionally proves the CLAT path end to end with an ICMP or TCP functional test.
+- **Health checks with remediation** - `Test-WinClat` checks the global configuration and every IPv6-enabled interface, explains each warning and failure, and optionally proves the CLAT path end to end with an ICMP or TCP functional test. Its summary distinguishes CLAT that is translating (`Pass`) from CLAT that would start on an IPv6-only network (`Ready`) or would not (`Inactive`).
 - **Safe configuration changes** - `Set-WinClatConfiguration` refuses combinations that would stop CLAT from ever activating, re-reads every change because netsh reports success even when Group Policy overrides it, and asks for confirmation before any change that stops CLAT.
 - **Baselines** - `Export-WinClatConfiguration` and `Import-WinClatConfiguration` save and restore the global configuration. Import parses each file strictly and never runs it. `Reset-WinClatConfiguration` returns computers to the Windows defaults.
 - **Structured output** - Functions emit flat `PSCustomObject` results to the pipeline, so output can be filtered, sorted, and exported with `Export-Csv`.
+
+## What's New in 1.1.0
+
+- **Clearer overall result** - `Test-WinClat` reports `Pass` only when CLAT is translating. A computer that is not translating and has no problem reports `Ready` when CLAT would start automatically on an IPv6-only network, or `Inactive` when it would not. Without elevation the result is `Incomplete (requires elevation)`. Version 1.0 reported `Pass` in all of these cases.
+- **Note property** - The `Test-WinClat` summary has a new `Note` property that explains `Ready`, `Inactive`, and `Incomplete`.
+- **Policy override** - The Policy override check is `Info` instead of `Warning` when Group Policy controls every setting that differs from the local configuration.
+
+> **Note:** Scripts that filter on `Overall -eq 'Pass'` or `Overall -ne 'Pass'` return different computers than in version 1.0. Filters on `Warning` and `Fail` are unchanged.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ## Description
 
@@ -130,7 +135,7 @@ Get-Content -Path .\clients.txt | Get-WinClatInstance | Where-Object -FilterScri
 
 ### Test-WinClat
 
-Diagnose WinCLAT readiness and operation. By default, returns one summary per computer with the overall result (`Pass`, `Warning`, `Fail`, or `NotApplicable`) and the checks that failed or warned. With `-Detailed`, returns one row per check with a `Detail` explaining what was found and a `Remediation` for each warning and failure.
+Diagnose WinCLAT readiness and operation. By default, returns one summary per computer with the overall result and the checks that failed or warned. `Overall` is `Pass` only when CLAT is translating. When it is not, and nothing failed or warned, `Overall` is `Ready` if CLAT would start automatically on an IPv6-only network or `Inactive` if it would not, with a `Note` naming the checks that did not pass. Without elevation, `Overall` is `Incomplete`, because whether CLAT is active is not known. `Fail` and `Warning` take precedence, and Windows Server reports `NotApplicable`. With `-Detailed`, returns one row per check with a `Detail` explaining what was found and a `Remediation` for each warning and failure.
 
 Global checks (feature present, CLAT permitted, prefix discovery, Group Policy override) do not require elevation. Interface checks (SLAAC address, IPv6 default route, native IPv4, instance active, CLAT address, prefix consistency) require elevation and are skipped without it. When `-IPv4Target` is supplied and an interface is translating, a functional test sends up to three ICMP echo requests, or one TCP connection when `-IPv4Port` is also supplied, and reports which interface and source address the traffic used.
 
