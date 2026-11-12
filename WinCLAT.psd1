@@ -4,7 +4,7 @@
     RootModule           = 'WinCLAT.psm1'
 
     # Version number of this module
-    ModuleVersion        = '1.0.1'
+    ModuleVersion        = '1.1.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -65,6 +65,13 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+1.1.0 (November 12, 2026)
+
+- Test-WinClat: Overall now separates CLAT that is active from CLAT that could start. Pass means CLAT is translating and nothing failed or warned. When CLAT is not translating and nothing failed or warned, Overall is Ready if CLAT would start automatically on an IPv6-only network (CLAT permitted, Prefix discovery valid, and Mode sanity all passed) and Inactive if it would not. Without elevation Overall is Incomplete, shown as 'Incomplete (requires elevation)' for a single computer. Previously all of these reported Pass.
+- Test-WinClat: the summary has a new Note property that explains Ready, Inactive, and Incomplete, and names the checks that did not pass for Inactive.
+- Test-WinClat: Policy override is Info instead of Warning when every setting that differs between the active and persistent stores is controlled by Group Policy. A difference on a setting that policy does not control is still a Warning.
+- Filters on Overall -eq 'Pass' or -ne 'Pass' return different computers than in 1.0. Filters on Warning and Fail are unchanged.
+
 1.0.1 (November 4, 2026)
 
 - Get-WinClatInstance: TriggerSource now reports DHCP Option 108 (event 1106 trigger source code 2) for an instance that Windows enabled after honoring DHCPv4 option 108 on an IPv6-mostly network. It was previously reported as Unknown (2). Mode for these instances is Automatic, as before.

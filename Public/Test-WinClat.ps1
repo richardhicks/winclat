@@ -6,11 +6,13 @@ Function Test-WinClat {
         Diagnoses Windows CLAT (WinCLAT) readiness and operation.
 
     .DESCRIPTION
-        Runs global and per-interface health checks and returns one WinClat.TestSummary object per computer: the overall result (Pass, Warning, Fail, or NotApplicable), the number of passed, warning, and failed checks, whether any interface is translating, and Issues, which names each check that failed or warned, with its interface. Runs locally or against one or more remote computers in parallel.
+        Runs global and per-interface health checks and returns one WinClat.TestSummary object per computer: the overall result, the number of passed, warning, and failed checks, whether any interface is translating, Issues, which names each check that failed or warned, with its interface, and a Note that explains the overall result when CLAT is not active. Runs locally or against one or more remote computers in parallel.
+
+        Overall is Pass only when CLAT is translating and nothing failed or warned. When CLAT is not translating and nothing failed or warned, Overall is Ready if the configuration would start CLAT automatically on an IPv6-only network (CLAT permitted, Prefix discovery valid, and Mode sanity all passed), and Inactive if it would not; the Note names the checks that did not pass. Neither is a failure: on a dual-stack network CLAT is not expected to be active. Overall is Incomplete when the session is not elevated, because whether CLAT is active is then not known; the single-computer view shows it as 'Incomplete (requires elevation)'. Fail and Warning take precedence over these, and Windows Server reports NotApplicable.
 
         When Overall is Fail or Warning, run Test-WinClat -ComputerName <name> -Detailed | Format-List for the computers concerned to see the result of every check, with a Detail explaining what was found and a Remediation for each warning and failure. The default table for -Detailed shows the Detail but not the Remediation, so pipe it to Format-List to see both. -Detailed returns one flat WinClat.TestResult object per check, with Result Pass, Warning, Fail, Info, or Skipped.
 
-        Global checks do not require elevation: Feature present, CLAT permitted, Prefix discovery valid, Policy override, and Policy controlled (only when Group Policy controls a WinCLAT setting). When Permit is disabled, as it is by default in Windows, CLAT permitted fails only when an interface is IPv6-only and could use CLAT, and is Info otherwise, so an untouched configuration on a dual-stack network does not fail. Without elevation the interfaces are not read and the check is Info. In an elevated session where a manually enabled instance is still translating, the check is a Warning that says how to stop CLAT or keep it, because disabling Permit stops automatically enabled instances but not manually enabled ones. WinCLAT is generally available on Windows 11 version 25H2 build 26200.9550 and later; on an earlier build Feature present fails and its Remediation names that build. On Windows Server, which Microsoft does not deliver WinCLAT to, Feature present is Info instead of Fail, every row has Status NotSupported, and the summary Overall is NotApplicable.
+        Global checks do not require elevation: Feature present, CLAT permitted, Prefix discovery valid, Policy override, and Policy controlled (only when Group Policy controls a WinCLAT setting). Policy override is Info when every setting that differs between the active and persistent stores is controlled by Group Policy, and a Warning when any is not.When Permit is disabled, as it is by default in Windows, CLAT permitted fails only when an interface is IPv6-only and could use CLAT, and is Info otherwise, so an untouched configuration on a dual-stack network does not fail. Without elevation the interfaces are not read and the check is Info. In an elevated session where a manually enabled instance is still translating, the check is a Warning that says how to stop CLAT or keep it, because disabling Permit stops automatically enabled instances but not manually enabled ones. WinCLAT is generally available on Windows 11 version 25H2 build 26200.9550 and later; on an earlier build Feature present fails and its Remediation names that build. On Windows Server, which Microsoft does not deliver WinCLAT to, Feature present is Info instead of Fail, every row has Status NotSupported, and the summary Overall is NotApplicable.
 
         Interface checks require elevation and run for each up adapter with IPv6 enabled: SLAAC address, IPv6 default route, Native IPv4, Instance active, CLAT address, and Prefix consistency, followed by one computer-wide Mode sanity check. CLAT address fails when the CLAT IPv6 address is not assigned to the adapter or not on its current prefix, which happens after a network change because CLAT keeps its address on the previous prefix (a known issue that Microsoft has acknowledged). IPv4 through CLAT then fails although Instance active passes; restarting the network adapter fixes it. When the session is not elevated, each interface check returns one Skipped row instead of failing the computer. Adapters that are not connected to an IPv6 network, such as the Hyper-V Default Switch or a VPN adapter, report Info rather than Fail.
 
@@ -52,7 +54,7 @@ Function Test-WinClat {
     .EXAMPLE
         Test-WinClat
 
-        Runs every check on the local computer and returns its summary. Run from an elevated session to include the interface checks.
+        Runs every check on the local computer and returns its summary. Run from an elevated session to include the interface checks; otherwise Overall is Incomplete.
 
     .EXAMPLE
         Test-WinClat -Detailed
@@ -98,9 +100,9 @@ Function Test-WinClat {
         https://learn.microsoft.com/windows-server/administration/windows-commands/netsh
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.1.0
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 12, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com

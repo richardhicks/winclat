@@ -31,9 +31,9 @@ Function Get-WinClatTestScript {
         https://learn.microsoft.com/windows-server/administration/windows-commands/netsh
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.1.0
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 12, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
@@ -381,25 +381,42 @@ Function Get-WinClatTestScript {
 
         If ($Persistent) {
 
-            $Differences = @(ForEach ($Name in @('Permit', 'Pref64FromDns', 'Pref64FromRA', 'AutoEnable')) {
+            $Differences = @()
 
-                    If ("$($Active.$Name)" -ne "$($Persistent.$Name)") {
+            # Differences on settings that Group Policy does not control have no known cause, so only those warn (section 8.2).
+            $Unexplained = @()
 
-                        "${Name}: active $($Active.$Name), persistent $($Persistent.$Name)"
+            ForEach ($Name in @('Permit', 'Pref64FromDns', 'Pref64FromRA', 'AutoEnable')) {
+
+                If ("$($Active.$Name)" -ne "$($Persistent.$Name)") {
+
+                    $Differences += "${Name}: active $($Active.$Name), persistent $($Persistent.$Name)"
+
+                    If ($Controlled -notcontains $Name) {
+
+                        $Unexplained += $Name
 
                     }
 
-                })
+                }
 
-            If ($Differences.Count -gt 0) {
+            }
 
-                & $Emit $null 'Policy override' 'Warning' "The active and persistent stores differ: $($Differences -join '; ')." 'Group Policy overrides the local configuration. Change the policy, or align the local settings with Set-WinClatConfiguration.'
+            If ($Differences.Count -eq 0) {
+
+                & $Emit $null 'Policy override' 'Pass' 'The active and persistent stores match.' $null
+
+            }
+
+            ElseIf ($Unexplained.Count -eq 0) {
+
+                & $Emit $null 'Policy override' 'Info' "Group Policy overrides the local configuration: $($Differences -join '; '). Local changes to these settings do not take effect while the policy applies." 'To change these settings, change the WinCLAT policy under Computer Configuration > Administrative Templates > Network > TCPIP Settings > IPv6 Transition Technologies.'
 
             }
 
             Else {
 
-                & $Emit $null 'Policy override' 'Pass' 'The active and persistent stores match.' $null
+                & $Emit $null 'Policy override' 'Warning' "The active and persistent stores differ: $($Differences -join '; ')." 'Group Policy overrides the local configuration. Change the policy, or align the local settings with Set-WinClatConfiguration.'
 
             }
 

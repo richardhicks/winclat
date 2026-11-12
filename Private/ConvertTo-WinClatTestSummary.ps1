@@ -8,10 +8,11 @@ Function ConvertTo-WinClatTestSummary {
     .DESCRIPTION
         Builds the WinClat.TestSummary object that Test-WinClat returns by default (DESIGN.md, sections 6 and 8.6):
           - Status: the first non-Success Status among the rows, or Success.
-          - Overall: Fail when any row failed, otherwise Warning when any row warned, otherwise Pass. NotApplicable when Status is NotSupported (Windows Server).
+          - Overall, in order of precedence: NotApplicable when Status is NotSupported (Windows Server); Fail when any row failed; Warning when any row warned; Incomplete when the interface checks were skipped for lack of elevation; Pass when CLAT is translating; Ready when CLAT permitted, Prefix discovery valid, and Mode sanity all passed; otherwise Inactive.
           - Passed, Warnings, Failures: the number of rows with each Result. Info and Skipped rows are not counted.
           - Translating: $true when an 'Instance active' check passed, $false when it ran on at least one interface without passing, and $null when it did not run.
           - Issues: the checks with Result Fail or Warning, in row order and each once, as 'Check (InterfaceAlias)' or 'Check' for checks without an interface, joined with '; ', for example 'CLAT address (Internal); Functional test'. $null when there are none.
+          - Note: why Overall is Incomplete, Ready, or Inactive, and the elevation note whenever the interface checks were skipped for elevation. $null otherwise.
 
         Runs on the calling computer only.
 
@@ -36,9 +37,9 @@ Function ConvertTo-WinClatTestSummary {
         https://learn.microsoft.com/powershell/scripting/learn/deep-dives/everything-about-pscustomobject
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.1.0
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 12, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
@@ -73,9 +74,40 @@ Function ConvertTo-WinClatTestSummary {
     $Warnings = @($InputObject | Where-Object -FilterScript { $_.Result -eq 'Warning' }).Count
     $Failures = @($InputObject | Where-Object -FilterScript { $_.Result -eq 'Fail' }).Count
 
-    $Overall = 'Pass'
+    $Translating = $null
+    $InstanceRows = @($InputObject | Where-Object -FilterScript { $_.Check -eq 'Instance active' -and $_.Result -ne 'Skipped' })
 
-    If ($Failures -gt 0) {
+    If ($InstanceRows.Count -gt 0) {
+
+        $Translating = @($InstanceRows | Where-Object -FilterScript { $_.Result -eq 'Pass' }).Count -gt 0
+
+    }
+
+    # The test script skips every interface check with this Detail when the session is not elevated (DESIGN.md, section 8.6).
+    $NotElevated = @($InputObject | Where-Object -FilterScript { $_.Result -eq 'Skipped' -and "$($_.Detail)" -like 'Interface checks require an elevated session*' }).Count -gt 0
+
+    # The configuration checks that must pass for CLAT to start on its own on an IPv6-only network.
+    $ReadyChecks = @('CLAT permitted', 'Prefix discovery valid', 'Mode sanity')
+    $NotReady = @(ForEach ($Check in $ReadyChecks) {
+
+            If (@($InputObject | Where-Object -FilterScript { $_.Check -eq $Check -and $_.Result -eq 'Pass' }).Count -eq 0) {
+
+                $Check
+
+            }
+
+        })
+
+    $Note = $null
+
+    # Windows Server never receives WinCLAT, so its checks are not applicable rather than passed.
+    If ($Status -eq 'NotSupported') {
+
+        $Overall = 'NotApplicable'
+
+    }
+
+    ElseIf ($Failures -gt 0) {
 
         $Overall = 'Fail'
 
@@ -87,19 +119,36 @@ Function ConvertTo-WinClatTestSummary {
 
     }
 
-    # Windows Server never receives WinCLAT, so its checks are not applicable rather than passed.
-    If ($Status -eq 'NotSupported') {
+    ElseIf ($NotElevated) {
 
-        $Overall = 'NotApplicable'
+        $Overall = 'Incomplete'
 
     }
 
-    $Translating = $null
-    $InstanceRows = @($InputObject | Where-Object -FilterScript { $_.Check -eq 'Instance active' -and $_.Result -ne 'Skipped' })
+    ElseIf ($Translating -eq $true) {
 
-    If ($InstanceRows.Count -gt 0) {
+        $Overall = 'Pass'
 
-        $Translating = @($InstanceRows | Where-Object -FilterScript { $_.Result -eq 'Pass' }).Count -gt 0
+    }
+
+    ElseIf ($NotReady.Count -eq 0) {
+
+        $Overall = 'Ready'
+        $Note = 'CLAT is not active. It would start automatically on an IPv6-only network.'
+
+    }
+
+    Else {
+
+        $Overall = 'Inactive'
+        $Note = "CLAT is not active and would not start automatically on an IPv6-only network. Checks that did not pass: $($NotReady -join ', ')."
+
+    }
+
+    # Without elevation the result is incomplete whatever Overall is, so the reason is always given.
+    If ($NotElevated -and $Status -ne 'NotSupported') {
+
+        $Note = 'Interface checks require an elevated session, so whether CLAT is active or ready is not known. Run Test-WinClat elevated.'
 
     }
 
@@ -144,6 +193,7 @@ Function ConvertTo-WinClatTestSummary {
         Failures     = $Failures
         Translating  = $Translating
         Issues       = $IssueText
+        Note         = $Note
 
     }
 

@@ -610,7 +610,9 @@
                                 <PropertyName>Status</PropertyName>
                             </ListItem>
                             <ListItem>
-                                <PropertyName>Overall</PropertyName>
+                                <Label>Overall</Label>
+                                <!-- The value stays one word for filtering; only this view adds the reason (DESIGN.md, section 8.6). -->
+                                <ScriptBlock>If ($_.Overall -eq 'Incomplete') { 'Incomplete (requires elevation)' } Else { $_.Overall }</ScriptBlock>
                             </ListItem>
                             <ListItem>
                                 <PropertyName>Passed</PropertyName>
@@ -626,6 +628,9 @@
                             </ListItem>
                             <ListItem>
                                 <PropertyName>Issues</PropertyName>
+                            </ListItem>
+                            <ListItem>
+                                <PropertyName>Note</PropertyName>
                             </ListItem>
                         </ListItems>
                     </ListEntry>
