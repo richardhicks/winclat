@@ -2,8 +2,6 @@
 
 All notable changes to the WinCLAT module are recorded in this file. Versions follow [Semantic Versioning](https://semver.org/): a patch release fixes behavior without changing output, a minor release adds features or changes how results are reported, and a major release removes or renames commands, parameters, or properties.
 
-## [Unreleased]
-
 ## [1.1.0] - November 12, 2026
 
 ### Changed
@@ -41,7 +39,6 @@ Initial release.
 - `Export-WinClatConfiguration` and `Import-WinClatConfiguration`: save and restore the global configuration. Import parses the file strictly and never runs it.
 - `Reset-WinClatConfiguration`: returns the global configuration to the Windows defaults.
 
-[Unreleased]: https://github.com/richardhicks/WinCLAT/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/richardhicks/WinCLAT/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/richardhicks/WinCLAT/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/richardhicks/WinCLAT/releases/tag/v1.0.0
