@@ -10,7 +10,7 @@ Function Get-WinClatTestScript {
           1. Feature present. When the feature is missing, every other check returns Skipped. On Windows Server the check is Info, not Fail, and every row has Status NotSupported, because Microsoft delivers WinCLAT to client editions only.
           2. Global checks from 'show global store=both' (section 8.2): CLAT permitted (when Permit is disabled: Fail only when an interface is IPv6-only and could use CLAT, Info otherwise or without elevation, and a Warning when an instance is still translating, which needs elevation to see), Prefix discovery valid, Policy override, and Policy controlled (Info, only when policy applies). If the global configuration cannot be read, one 'Global configuration' row with Status Failed is returned instead.
           3. Elevation. When the session is not elevated, the seven interface checks return one Skipped row each with no interface.
-          4. Interface checks for each up adapter with IPv6 bound, filtered by InterfaceAlias (section 8.3): SLAAC address, IPv6 default route, Native IPv4, Instance active, CLAT address, and Prefix consistency.
+          4. Interface checks for each up adapter with IPv6 bound, filtered by InterfaceAlias (section 8.3): SLAAC address, IPv6 default route, Native IPv4, Instance active, CLAT address, and Prefix consistency. The SLAAC address check names a stable address when there is one, not a temporary one. When 'show instance' fails because IPxlatCfgSvc is stopped (Get-WinClatRpcFailure), Instance active treats the interface as having no instance: Info when CLAT is not expected to run, Fail when the prerequisites are met.
           5. Mode sanity, once per computer, considering every up adapter with IPv6 bound.
           6. Functional test, when an IPv4 target is supplied and an interface is translating (section 8.4).
 
@@ -31,9 +31,9 @@ Function Get-WinClatTestScript {
         https://learn.microsoft.com/windows-server/administration/windows-commands/netsh
 
     .NOTES
-        Version:        1.1.0
+        Version:        1.2.0
         Creation Date:  October 28, 2026
-        Last Updated:   November 12, 2026
+        Last Updated:   November 13, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
@@ -56,6 +56,7 @@ Function Get-WinClatTestScript {
         'Get-WinClatNetshFailure'
         'Get-WinClatOSBuild'
         'Get-WinClatPolicyControlled'
+        'Get-WinClatRpcFailure'
         'Test-WinClatElevation'
         'Get-WinClatFeatureFailure'
         'Test-WinClatFeature'
@@ -254,11 +255,14 @@ Function Get-WinClatTestScript {
 
             $Index = $Adapter.ifIndex
             $IPv6Assigned = @(Get-NetIPAddress -InterfaceIndex $Index -AddressFamily IPv6 -ErrorAction SilentlyContinue | Where-Object -FilterScript { $_ })
+            $SlaacAll = @($IPv6Assigned | Where-Object -FilterScript { $_.PrefixOrigin -eq 'RouterAdvertisement' -and $_.IPAddress -notlike 'fe80:*' })
 
             $Fact = @{
 
                 IPv6Assigned = $IPv6Assigned
-                Slaac        = @($IPv6Assigned | Where-Object -FilterScript { $_.PrefixOrigin -eq 'RouterAdvertisement' -and $_.IPAddress -notlike 'fe80:*' })
+                # Stable addresses first, so the SLAAC address check names one: Windows reports temporary (privacy)
+                # addresses with SuffixOrigin Random (section 8.3).
+                Slaac        = @(@($SlaacAll | Where-Object -FilterScript { "$($_.SuffixOrigin)" -ne 'Random' }) + @($SlaacAll | Where-Object -FilterScript { "$($_.SuffixOrigin)" -eq 'Random' }))
                 Route        = @(Get-NetRoute -InterfaceIndex $Index -DestinationPrefix '::/0' -ErrorAction SilentlyContinue | Where-Object -FilterScript { $_ })
                 NativeIPv4   = @(Get-NetIPAddress -InterfaceIndex $Index -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object -FilterScript { $_.IPAddress -notlike '169.254.*' -and $_.IPAddress -notmatch '^192\.0\.0\.[0-7]$' } | ForEach-Object -Process { $_.IPAddress })
 
@@ -567,16 +571,43 @@ Function Get-WinClatTestScript {
 
             }
 
+            # A stopped IPxlatCfgSvc means no instance exists, so the interface is judged like one with no instance
+            # data: Info when CLAT is not expected to run, Fail when the prerequisites are met (section 8.3).
+            $NoInstance = $null
+
             If ($ExitCode -ne 0) {
 
-                $Classified = Get-WinClatNetshFailure -InputObject $Output -ExitCode $ExitCode
-                & $Emit $Alias 'Instance active' 'Fail' $Classified.Message $null
+                $Rpc = Get-WinClatRpcFailure -InputObject $Output
+
+                If ($Rpc -and $Rpc.Idle) {
+
+                    $NoInstance = 'The IP Translation Configuration Service (IPxlatCfgSvc) is not running, so no instance exists.'
+
+                }
+
+                ElseIf ($Rpc) {
+
+                    & $Emit $Alias 'Instance active' 'Fail' $Rpc.Message $null
+
+                }
+
+                Else {
+
+                    $Classified = Get-WinClatNetshFailure -InputObject $Output -ExitCode $ExitCode
+                    & $Emit $Alias 'Instance active' 'Fail' $Classified.Message $null
+
+                }
 
             }
 
-            Else {
+            If ($ExitCode -eq 0 -or $NoInstance) {
 
-                $Instance = $InstanceState[$Key]
+                If (-not $NoInstance) {
+
+                    $Instance = $InstanceState[$Key]
+
+                }
+
                 # Each translating interface takes the next address in 192.0.0.0/29: 192.0.0.1, then 192.0.0.2 on a second
                 # interface (CLIENT6, October 27, 2026; section 10). 192.0.0.0 is the gateway.
                 $IsActive = [bool]($Instance -and $Instance.Enabled -eq $true -and $Instance.IsTranslating -eq $true -and $Instance.RemotePrefix -and $Instance.IPv4Address -match '^192\.0\.0\.[1-7]$')
@@ -591,6 +622,12 @@ Function Get-WinClatTestScript {
                 Else {
 
                     $State = 'netsh.exe returned no instance data.'
+
+                    If ($NoInstance) {
+
+                        $State = $NoInstance
+
+                    }
 
                     If ($Instance) {
 

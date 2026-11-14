@@ -2,6 +2,18 @@
 
 All notable changes to the WinCLAT module are recorded in this file. Versions follow [Semantic Versioning](https://semver.org/): a patch release fixes behavior without changing output, a minor release adds features or changes how results are reported, and a major release removes or renames commands, parameters, or properties.
 
+## [1.2.0] - November 13, 2026
+
+### Changed
+
+- `Get-WinClatInstance`: while CLAT has nothing to translate, Windows keeps the IP Translation Configuration Service (`IPxlatCfgSvc`) stopped, and netsh cannot read the instance ("The RPC server is unavailable."). The adapter is now returned with `Status` `Success`, empty instance properties, and a `Message` saying there is no active CLAT instance. Previously it was `Failed`, which counted the computer in the multi-computer warning. A disabled service is still `Failed`, and the `Message` now says the service is disabled.
+- `Test-WinClat`: in the same situation, Instance active is judged like any interface that is not translating: `Info` when CLAT is not expected to run (for example, `Permit` disabled or native IPv4 present), and `Fail` only when the prerequisites are met. Previously it was always `Fail` with only the netsh message, so a default dual-stack client reported `Overall` `Fail`.
+- `Test-WinClat`: the SLAAC address check names a stable address instead of a temporary (privacy) address when the interface has both. The count and the result are unchanged.
+
+### Upgrade notes
+
+- Scripts that find problem computers with `Get-WinClatInstance | Where-Object -FilterScript { $_.Status -ne 'Success' }` no longer return adapters where CLAT is simply idle. To list those adapters, filter on `Status -eq 'Success'` and an empty `Enabled`.
+
 ## [1.1.0] - November 12, 2026
 
 ### Changed
@@ -39,6 +51,7 @@ Initial release.
 - `Export-WinClatConfiguration` and `Import-WinClatConfiguration`: save and restore the global configuration. Import parses the file strictly and never runs it.
 - `Reset-WinClatConfiguration`: returns the global configuration to the Windows defaults.
 
+[1.2.0]: https://github.com/richardhicks/WinCLAT/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/richardhicks/WinCLAT/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/richardhicks/WinCLAT/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/richardhicks/WinCLAT/releases/tag/v1.0.0

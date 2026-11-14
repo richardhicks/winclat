@@ -10,7 +10,7 @@ Function Get-WinClatInstanceScript {
           1. Feature check: 'clat' in the 'netsh interface ?' sub-context list. If absent, returns one object with Status NotSupported on Windows Server or FeatureNotAvailable on a client (Get-WinClatFeatureFailure).
           2. Elevation check on the current token. If not elevated, returns one ElevationRequired object.
           3. Enumerates up adapters with Get-NetAdapter, drops adapters without IPv6 (ms_tcpip6) bound, filters by InterfaceAlias (wildcards supported), and runs 'netsh interface clat show instance interface=<ifIndex>' for each (section 4.7). If the IPv6 bindings cannot be read, no adapters are dropped and the reason is written to the verbose stream.
-          4. Classifies a non-zero exit code for an adapter with Get-WinClatNetshFailure. Other adapters are still reported.
+          4. Classifies a non-zero exit code for an adapter with Get-WinClatNetshFailure. Other adapters are still reported. When netsh reports that the RPC server is unavailable and IPxlatCfgSvc is stopped but not disabled, no instance exists, so the adapter is reported with Status Success, empty instance properties, and a message (Get-WinClatRpcFailure, section 7.2).
 
         For an enabled instance, TriggerSource comes from the newest event 1106 for the adapter's LUID in the IPxlatCfg event log (Get-WinClatTriggerSource), and Mode is Manual when TriggerSource is Manual and Automatic otherwise. Windows keeps a manually enabled instance running when autoenable is enabled again, so autoenable alone does not show it. When the instance is disabled or no event is found, Mode is derived from the active autoenable value read with 'show global' in the same session: Automatic when enabled, Manual when disabled, $null when it cannot be read (section 6).
 
@@ -33,9 +33,9 @@ Function Get-WinClatInstanceScript {
         https://learn.microsoft.com/powershell/module/netadapter/get-netadapter
 
     .NOTES
-        Version:        1.0.0
+        Version:        1.2.0
         Creation Date:  October 28, 2026
-        Last Updated:   October 28, 2026
+        Last Updated:   November 13, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
@@ -54,6 +54,7 @@ Function Get-WinClatInstanceScript {
         'ConvertTo-WinClatTimeSpan'
         'ConvertTo-WinClatInstance'
         'Get-WinClatNetshFailure'
+        'Get-WinClatRpcFailure'
         'Get-WinClatTriggerSource'
         'Test-WinClatElevation'
         'Get-WinClatFeatureFailure'
@@ -188,8 +189,26 @@ Function Get-WinClatInstanceScript {
 
             If ($ExitCode -ne 0) {
 
+                # A stopped IPxlatCfgSvc means no instance exists, which is a result, not a failure (section 7.2).
+                $Rpc = Get-WinClatRpcFailure -InputObject $Output
+
+                If ($Rpc -and $Rpc.Idle) {
+
+                    ConvertTo-WinClatInstance @Result -Status 'Success' -Message $Rpc.Message
+                    Continue
+
+                }
+
                 $Classified = Get-WinClatNetshFailure -InputObject $Output -ExitCode $ExitCode
-                ConvertTo-WinClatInstance @Result -Status $Classified.Status -Message $Classified.Message
+                $Message = $Classified.Message
+
+                If ($Rpc) {
+
+                    $Message = $Rpc.Message
+
+                }
+
+                ConvertTo-WinClatInstance @Result -Status $Classified.Status -Message $Message
                 Continue
 
             }

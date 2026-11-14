@@ -14,13 +14,13 @@ PowerShell module for managing and reporting on Windows CLAT (WinCLAT) on Window
 - **Baselines** - `Export-WinClatConfiguration` and `Import-WinClatConfiguration` save and restore the global configuration. Import parses each file strictly and never runs it. `Reset-WinClatConfiguration` returns computers to the Windows defaults.
 - **Structured output** - Functions emit flat `PSCustomObject` results to the pipeline, so output can be filtered, sorted, and exported with `Export-Csv`.
 
-## What's New in 1.1.0
+## What's New in 1.2.0
 
-- **Clearer overall result** - `Test-WinClat` reports `Pass` only when CLAT is translating. A computer that is not translating and has no problem reports `Ready` when CLAT would start automatically on an IPv6-only network, or `Inactive` when it would not. Without elevation the result is `Incomplete (requires elevation)`. Version 1.0 reported `Pass` in all of these cases.
-- **Note property** - The `Test-WinClat` summary has a new `Note` property that explains `Ready`, `Inactive`, and `Incomplete`.
-- **Policy override** - The Policy override check is `Info` instead of `Warning` when Group Policy controls every setting that differs from the local configuration.
+- **Idle CLAT is no longer a failure** - When CLAT has nothing to translate, Windows stops the IP Translation Configuration Service and netsh reports "The RPC server is unavailable." `Get-WinClatInstance` now returns `Success` with a message saying there is no active CLAT instance, instead of `Failed`.
+- **Instance active on dual-stack clients** - In the same situation, `Test-WinClat` reports Instance active as `Info` when CLAT is not expected to run, instead of `Fail`. It still fails on an IPv6-only interface where CLAT should be running.
+- **SLAAC address** - The SLAAC address check names the interface's stable address instead of a temporary one.
 
-> **Note:** Scripts that filter on `Overall -eq 'Pass'` or `Overall -ne 'Pass'` return different computers than in version 1.0. Filters on `Warning` and `Fail` are unchanged.
+> **Note:** Scripts that find problem computers with `Get-WinClatInstance` and `Status -ne 'Success'` no longer return adapters where CLAT is simply idle.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history.
 

@@ -4,7 +4,7 @@
     RootModule           = 'WinCLAT.psm1'
 
     # Version number of this module
-    ModuleVersion        = '1.1.0'
+    ModuleVersion        = '1.2.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -65,6 +65,13 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+1.2.0 (November 13, 2026)
+
+- Get-WinClatInstance: when the IP Translation Configuration Service (IPxlatCfgSvc) is stopped because CLAT has nothing to translate, and netsh reports "The RPC server is unavailable.", the adapter is returned with Status Success, empty instance properties, and a Message saying there is no active CLAT instance. Previously it was Failed. A disabled service is still Failed, and the Message says so.
+- Test-WinClat: in the same situation, Instance active is Info when CLAT is not expected to run and Fail only when the prerequisites are met. Previously it was always Fail.
+- Test-WinClat: the SLAAC address check names a stable address instead of a temporary one when the interface has both.
+- Scripts that filter Get-WinClatInstance results on Status -ne 'Success' no longer return adapters where CLAT is simply idle.
+
 1.1.0 (November 12, 2026)
 
 - Test-WinClat: Overall now separates CLAT that is active from CLAT that could start. Pass means CLAT is translating and nothing failed or warned. When CLAT is not translating and nothing failed or warned, Overall is Ready if CLAT would start automatically on an IPv6-only network (CLAT permitted, Prefix discovery valid, and Mode sanity all passed) and Inactive if it would not. Without elevation Overall is Incomplete, shown as 'Incomplete (requires elevation)' for a single computer. Previously all of these reported Pass.

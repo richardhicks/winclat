@@ -16,6 +16,8 @@ Function Get-WinClatInstance {
 
         The CLAT IPv6 address is regenerated each time the instance is re-created. Do not treat it as a stable identifier.
 
+        While CLAT has nothing to translate, Windows keeps the IP Translation Configuration Service (IPxlatCfgSvc) stopped and netsh.exe cannot read the instance. The adapter is then returned with Status Success, empty instance properties, and a Message saying there is no active CLAT instance. If the service is disabled, the adapter is returned with Status Failed.
+
         Remote computers must have WinRM enabled, typically through Group Policy. Roaming devices may be offline at run time. Each remote computer is first checked on TCP 5985 (WinRM over HTTP); one that does not answer within 2 seconds, or whose name does not resolve, is returned as Unreachable at once instead of after a WinRM timeout. Failures are not written as errors: every computer returns its result with a Status and a Message that explains it, and when a run for several computers has any computer that did not complete, one warning at the end gives the count. To list them, filter the results, for example with Where-Object -FilterScript { $_.Status -ne 'Success' }.
 
     .PARAMETER InterfaceAlias
@@ -62,9 +64,9 @@ Function Get-WinClatInstance {
         https://learn.microsoft.com/windows-server/administration/windows-commands/netsh
 
     .NOTES
-        Version:        1.0.1
+        Version:        1.2.0
         Creation Date:  October 28, 2026
-        Last Updated:   November 4, 2026
+        Last Updated:   November 13, 2026
         Author:         Richard Hicks
         Organization:   Richard M. Hicks Consulting, Inc.
         Contact:        rich@richardhicks.com
